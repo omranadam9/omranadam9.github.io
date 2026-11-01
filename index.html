@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>HR — الحضور والانصراف</title>
+<style>
+  :root { --bg:#f4f6f8; --card:#fff; --text:#17202a; --muted:#6b7785; --accent:#0d8f80; --out:#c0622b; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#10161c; --card:#1a232c; --text:#eef2f5; --muted:#93a1ae; } }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;
+         background:var(--bg); color:var(--text); font:17px/1.7 -apple-system, "Segoe UI", Tahoma, sans-serif; }
+  main { width:100%; max-width:380px; background:var(--card); border-radius:20px; padding:28px 22px; text-align:center;
+         box-shadow:0 6px 24px rgba(0,0,0,.08); }
+  h1 { font-size:22px; margin:0 0 6px; }
+  p { margin:6px 0; color:var(--muted); font-size:15px; }
+  a.btn { display:block; margin:14px 0 4px; padding:15px; border-radius:14px; color:#fff; text-decoration:none;
+          font-weight:700; font-size:18px; background:var(--accent); }
+  a.btn.out { background:var(--out); }
+  .err { color:#c0392b; }
+  small { display:block; margin-top:16px; color:var(--muted); font-size:13px; }
+  button.copy { margin-top:14px; width:100%; padding:12px; border-radius:12px; border:1px solid var(--muted);
+                background:transparent; color:var(--text); font:inherit; font-size:15px; }
+</style>
+</head>
+<body>
+<main id="app"></main>
+<script>
+(function () {
+  // المعاملات بعد # فلا تصل أي خادم: #e=<الموظف>&k=in|out&t=<السر>
+  var params = new URLSearchParams(location.hash.replace(/^#/, ''));
+  var e = (params.get('e') || '').trim();
+  var k = (params.get('k') || '').trim();
+  var t = (params.get('t') || '').trim();
+  var app = document.getElementById('app');
+
+  function el(tag, text, cls) {
+    var n = document.createElement(tag);
+    if (text) n.textContent = text;
+    if (cls) n.className = cls;
+    return n;
+  }
+  function deep(kind) {
+    return 'hrsystem://attendance?e=' + encodeURIComponent(e) + '&k=' + kind + '&t=' + encodeURIComponent(t);
+  }
+  function button(kind) {
+    var a = el('a', kind === 'in' ? '✅ تسجيل الحضور' : '🚪 تسجيل الانصراف', 'btn' + (kind === 'out' ? ' out' : ''));
+    a.href = deep(kind);
+    return a;
+  }
+
+  app.appendChild(el('h1', 'الحضور والانصراف'));
+
+  var valid = e && /^[0-9a-f]+$/i.test(t) && (k === '' || k === 'in' || k === 'out');
+  if (!valid) {
+    app.appendChild(el('p', 'الرابط غير صالح أو ناقص. اطلب من المدير رابطاً جديداً.', 'err'));
+    return;
+  }
+
+  if (k === 'in' || k === 'out') {
+    app.appendChild(el('p', k === 'in' ? 'اضغط الزر لفتح التطبيق وتسجيل حضورك.' : 'اضغط الزر لفتح التطبيق وتسجيل انصرافك.'));
+    app.appendChild(button(k));
+    // محاولة فتح التطبيق تلقائياً (إن منع المتصفح ذلك يكفي الضغط على الزر)
+    setTimeout(function () { location.href = deep(k); }, 400);
+  } else {
+    app.appendChild(el('p', 'اختر العملية:'));
+    app.appendChild(button('in'));
+    app.appendChild(button('out'));
+  }
+  // إن لم يفتح التطبيق (متصفح واتساب الداخلي يمنع ذلك أحياناً): انسخ الرابط والصقه داخل التطبيق
+  var copyKind = (k === 'in' || k === 'out') ? k : 'in';
+  var copyBtn = el('button', 'نسخ الرابط للصقه داخل التطبيق', 'copy');
+  copyBtn.onclick = function () {
+    var text = deep(copyKind);
+    var done = function () { copyBtn.textContent = 'تم النسخ ✓ — افتح التطبيق: «تسجيل حضور/انصراف من رسالة»'; };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { window.prompt('انسخ الرابط:', text); });
+    } else {
+      window.prompt('انسخ الرابط:', text);
+    }
+  };
+  app.appendChild(copyBtn);
+  app.appendChild(el('small', 'إن لم يفتح التطبيق: افتح هذه الصفحة في Safari (من قائمة ⋯ أو أيقونة البوصلة)، ويجب أن يكون تطبيق HR مثبّتاً وحساب iCloud مفعّلاً.'));
+})();
+</script>
+</body>
+</html>
